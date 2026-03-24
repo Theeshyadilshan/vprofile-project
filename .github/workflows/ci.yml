@@ -4,68 +4,12 @@ on:
   push:
     branches:
       - docker   # trigger only when docker branch is pushed
+  workflow_dispatch: 
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
 
-    env:
-      ECR_REPO: vprofile-app
-      IMAGE_TAG: v1
-      ECR_URI: 359238618683.dkr.ecr.eu-north-1.amazonaws.com/vprofileappimg
-      AWS_REGION: eu-north-1
-      CLUSTER: vprofile-ctr
-      SERVICE: vprofile-service
-
     steps:
-
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Set up JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Build with Maven
-      run: mvn clean package -DskipTests
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-
-    - name: Login to Amazon ECR
-      run: |
-        aws ecr get-login-password --region $AWS_REGION | \
-        docker login --username AWS --password-stdin $ECR_URI
-
-    - name: Build Docker Image
-      run: |
-        docker build -t $ECR_REPO:$IMAGE_TAG \
-        -f Docker-files/app/multistage/Dockerfile .
-
-    - name: Tag Docker Image
-      run: |
-        docker tag $ECR_REPO:$IMAGE_TAG $ECR_URI:$IMAGE_TAG
-
-    - name: Push Docker Image to ECR
-      run: |
-        docker push $ECR_URI:$IMAGE_TAG
-
-    - name: Deploy to ECS
-      run: |
-        aws ecs update-service \
-          --cluster $CLUSTER \
-          --service $SERVICE \
-          --force-new-deployment \
-          --region $AWS_REGION
-
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: vprofile-war
-        path: target/*.war
+      - name: print secrets
+        run: echo "aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }} and ${{ secrets.AWS_SECRET_ACCESS_KEY }}"
